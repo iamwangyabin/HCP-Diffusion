@@ -1,0 +1,87 @@
+_base_:
+  - cfgs/train/examples/fine-tuning.yaml
+
+mixed_precision: 'bf16'
+fp16: True
+
+unet: null
+text_encoder: null
+cache_path: '/home/jwang/ybwork/data/dbv1_cache'
+
+train:
+  train_steps: null
+  train_epochs: 1 # Choose one of [train_steps, train_epochs]
+  gradient_accumulation_steps: 1
+  workers: 4
+  max_grad_norm: 1.0
+  set_grads_to_none: False
+  save_step: 5000
+
+  optimizer:
+    _target_: transformers.optimization.Adafactor
+    _partial_: True
+    relative_step: False
+    weight_decay: 1e-3
+
+  scheduler:
+    name: 'constant_with_warmup'
+    num_warmup_steps: 100
+
+model:
+  pretrained_model_name_or_path: 'playgroundai/playground-v2-1024px-aesthetic'
+  clip_skip: 1
+  clip_final_norm: False
+  force_cast_precision: True
+#  ema:
+#    _target_: hcpdiff.utils.ema.ModelEMA
+#    _partial_: True
+#    decay_max: 0.9997
+#    power: 0.85
+
+data:
+  dataset1:
+    _target_: hcpdiff.data.CropInfoPairDataset
+    batch_size: 8
+    cache_latents: False
+    source:
+      data_source1:
+        _target_: hcpdiff.data.source.Text2ImageAttMapSource
+        img_root: '/home/jwang/ybwork/data/dbv1/artists'
+        prompt_template: 'prompt_tuning_template/caption.txt'
+        caption_file: '/home/jwang/ybwork/data/dbv1/artists/image_captions.json'
+#        img_root: '/home/jwang/ybwork/data/dbv1/test'
+#        prompt_template: 'prompt_tuning_template/caption.txt'
+#        caption_file: null
+        att_mask: null
+        bg_color: [ 255, 255, 255 ]
+        word_names: {}
+        text_transforms:
+          _target_: torchvision.transforms.Compose
+          transforms:
+            - _target_: hcpdiff.utils.caption_tools.TemplateFill
+              word_names: ${....word_names}
+      data_source2:
+        _target_: hcpdiff.data.source.Text2ImageAttMapSource
+        img_root: '/home/jwang/ybwork/data/dbv1/general'
+        prompt_template: 'prompt_tuning_template/caption.txt'
+        caption_file: '/home/jwang/ybwork/data/dbv1/general/image_captions.json'
+        att_mask: null
+        bg_color: [ 255, 255, 255 ]
+        word_names: {}
+        text_transforms:
+          _target_: torchvision.transforms.Compose
+          transforms:
+            - _target_: hcpdiff.utils.caption_tools.TemplateFill
+              word_names: ${....word_names}
+    bucket:
+      _target_: hcpdiff.data.bucket.RatioBucket.from_files # aspect ratio bucket
+      target_area: ${hcp.eval:"1024*1024"}
+      num_bucket: 20
+      pre_build_bucket: '/home/jwang/ybwork/data/dbv1_bucket'
+
+
+logger:
+  - _target_: hcpdiff.loggers.CLILogger
+    _partial_: True
+    out_path: 'train.log'
+    log_step: 100
