@@ -11,6 +11,7 @@ class WanDBLogger(BaseLogger):
     def __init__(self, exp_dir, out_path=None, enable_log_image=False, project='hcp-diffusion', log_step=10, image_log_step=200):
         super().__init__(exp_dir, out_path, enable_log_image, log_step, image_log_step)
         if exp_dir is not None:  # exp_dir is only available in local main process
+            wandb.login(key='a4d3a740e939973b02ac59fbd8ed0d6a151df34b')
             wandb.init(project=project, name=os.path.basename(exp_dir))
             wandb.save(os.path.join(exp_dir, 'cfg.yaml'), base_path=exp_dir)
         else:

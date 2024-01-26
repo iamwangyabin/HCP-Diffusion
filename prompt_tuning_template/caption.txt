@@ -1,1 +1,1 @@
-{pt1}{caption}
+{caption}
