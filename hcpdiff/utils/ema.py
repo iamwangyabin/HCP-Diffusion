@@ -5,14 +5,16 @@ from typing import Iterable, Tuple, Dict
 import numpy as np
 
 class ModelEMA:
-    def __init__(self, model: nn.Module, decay_max=0.9997, inv_gamma=1., power=2/3, start_step=0, device='cpu'):
-        self.train_params = {name:p.data.to(device) for name, p in model.named_parameters() if p.requires_grad}
-        self.train_params.update({name:p.to(device) for name, p in model.named_buffers()})
+    weight_dtype_map = {'fp32':torch.float32, 'fp16':torch.float16, 'bf16':torch.bfloat16}
+    def __init__(self, model: nn.Module, decay_max=0.9997, inv_gamma=1., power=2/3, start_step=0, device='cpu', dtype='fp32'):
+        self.train_params = {name:p.data.to(device, dtype=self.weight_dtype_map[dtype]) for name, p in model.named_parameters() if p.requires_grad}
+        self.train_params.update({name:p.to(device, dtype=self.weight_dtype_map[dtype]) for name, p in model.named_buffers()})
         self.decay_max = decay_max
         self.inv_gamma = inv_gamma
         self.power = power
         self.step = start_step
         self.device=device
+        self.dtype=dtype
 
     @torch.no_grad()
     def update(self, model: nn.Module):
