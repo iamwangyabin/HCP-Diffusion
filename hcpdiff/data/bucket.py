@@ -74,6 +74,7 @@ class RatioBucket(BaseBucket):
         self.size_buckets = data['size_buckets']
         self.idx_bucket_map = data['idx_bucket_map']
         self.data_len = data['data_len']
+        self.file_names = data['file_names']
 
     def save_bucket(self, path):
         with open(path, 'wb') as f:
@@ -82,6 +83,7 @@ class RatioBucket(BaseBucket):
                 'size_buckets':self.size_buckets,
                 'idx_bucket_map':self.idx_bucket_map,
                 'data_len':self.data_len,
+                'file_names':self.file_names,
             }, f)
 
     def build_buckets_from_ratios(self):
@@ -136,10 +138,16 @@ class RatioBucket(BaseBucket):
             ratio = np.log2(w/h)
             return ratio
 
+        # ratio_list = []
+        # with ThreadPoolExecutor() as executor:
+        #     for ratio in tqdm(executor.map(get_ratio, self.file_names), desc='get image info', total=len(self.file_names)):
+        #         ratio_list.append(ratio)
+        # ratio_list = np.array(ratio_list)
+
         ratio_list = []
-        with ThreadPoolExecutor() as executor:
-            for ratio in tqdm(executor.map(get_ratio, self.file_names), desc='get image info', total=len(self.file_names)):
-                ratio_list.append(ratio)
+        for file_name in tqdm(self.file_names, desc='get image info'):
+            ratio = get_ratio(file_name)
+            ratio_list.append(ratio)
         ratio_list = np.array(ratio_list)
 
         # 聚类，选出指定个数的bucket
@@ -192,12 +200,17 @@ class RatioBucket(BaseBucket):
 
     def rest(self, epoch):
         rs = np.random.RandomState(42+epoch)
-        bucket_list = [x.copy() for x in self.buckets]
+        # bucket_list = [x.copy() for x in self.buckets]
+        bucket = [x.copy() for x in self.buckets]
         # shuffle inter bucket
-        for x in bucket_list:
+        # rs.shuffle(bucket)
+        bucket_list = []
+        for x in bucket:
+            rows = len(x)//self.bs
+            x = x[:rows*self.bs]
             rs.shuffle(x)
+            bucket_list.append(x)
 
-        # shuffle of batches
         bucket_list = np.hstack(bucket_list).reshape(-1, self.bs).astype(int)
         rs.shuffle(bucket_list)
 

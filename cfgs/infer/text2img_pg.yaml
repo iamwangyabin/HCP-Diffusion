@@ -1,0 +1,40 @@
+# base_state*base_model_alpha + (lora_state[i]*lora_scale[i]*lora_alpha[i]) + (part_state[k]*part_alpha[k])
+
+#pretrained_model: 'playgroundai/playground-v2-1024px-aesthetic'
+#pretrained_model: 'playgroundai/playground-v2-512px-base'
+pretrained_model: 'cagliostrolab/animagine-xl-3.0'
+#pretrained_model: 'stabilityai/stable-diffusion-xl-base-0.9'
+#pretrained_model: 'stabilityai/stable-diffusion-xl-base-1.0'
+prompt: 'nsfw, masterpiece, best quality, highres, 1girl, solo, {lyging on bed}, nude, spread legs, arms up, mature,  red_hair, horns, long_hair, purple_eyes, bangs, looking_at_viewer, bare_shoulders, hair_between_eyes, cleavage, nipples,'
+neg_prompt: ''
+
+resume_ckpt_path:
+  unet: '../exps/2024-01-26-13-36-36/ckpts/unet-80000.safetensors'
+  TE: '../exps/2024-01-26-13-36-36/ckpts/text_encoder-80000.safetensors'
+
+bs: 4
+num: 1
+seed: 1993
+dtype: 'fp16'
+
+save:
+  out_dir: 'output/'
+  save_cfg: True
+  image_type: png
+  quality: 95
+#  image_type: webp
+#  quality: 75
+
+interface:
+  - _target_: hcpdiff.vis.DiskInterface
+    show_steps: 0
+    save_root: ${save.out_dir}
+    save_cfg: ${save.save_cfg}
+    image_type: ${save.image_type}
+    quality: ${save.quality}
+
+infer_args:
+  width: 1024
+  height: 1024
+  guidance_scale: 7.5
+  num_inference_steps: 50

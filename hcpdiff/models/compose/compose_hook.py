@@ -115,7 +115,7 @@ class ComposeTEEXHook:
     def hook(cls, text_enc: nn.Module, tokenizer, N_repeats=3, clip_skip=0, clip_final_norm=True, device='cuda', use_attention_mask=False) -> Union['ComposeTEEXHook', TEEXHook]:
         if isinstance(text_enc, ComposeTextEncoder):
             # multi text encoder
-            tehook_list = [(name, TEEXHook.hook(getattr(text_enc, name), tokenizer_i, N_repeats, clip_skip, clip_final_norm, device=device, use_attention_mask=use_attention_mask))
+            tehook_list = [(name, TEEXHook.hook(getattr(text_enc, name), tokenizer_i, N_repeats=N_repeats, clip_skip=clip_skip, clip_final_norm=clip_final_norm, device=device, use_attention_mask=use_attention_mask))
                 for name, tokenizer_i in tokenizer.tokenizer_list]
             return cls(tehook_list)
         else:

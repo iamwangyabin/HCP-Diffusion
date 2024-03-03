@@ -132,7 +132,6 @@ class Trainer:
 
         train_dataset = data_builder(tokenizer=self.tokenizer, tokenizer_repeats=self.cfgs.model.tokenizer_repeats)
         train_dataset.bucket.build(batch_size*self.world_size, file_names=train_dataset.source.get_image_list())
-
         arb = isinstance(train_dataset.bucket, RatioBucket)
         self.loggers.info(f"len(train_dataset): {len(train_dataset)}")
         return train_dataset, batch_size, arb
@@ -146,7 +145,7 @@ class Trainer:
                                                    sampler=train_sampler, collate_fn=train_dataset.collate_fn)
         return train_loader
 
-    def train(self, loss_ema=0.93):
+    def train(self):
         total_batch_size = sum(self.batch_size_list)*self.world_size*self.cfgs.train.gradient_accumulation_steps
 
         self.loggers.info("***** Running training *****")
@@ -157,14 +156,12 @@ class Trainer:
         self.global_step = 0
         if self.cfgs.train.resume is not None:
             self.global_step = self.cfgs.train.resume.start_step
-        # self.already_cached = torch.tensor(torch.load('/home/jwang/ybwork/data/dbv1_pg_cache_keys.pt'), dtype=torch.int64, device=self.device)
-        # self.already_cached = set(torch.load('/home/jwang/ybwork/data/dbv1_pg_cache_keys.pt'))
 
         for data_list in self.train_loader_group:
             with torch.no_grad():
-                ls, names = self.train_one_step(data_list)
+                names, ls, mask, crop_info = self.train_one_step(data_list)
 
-            tmp = [ls, names]
+            tmp = [names, ls, mask, crop_info]
             torch.save(tmp, os.path.join(self.cfgs.cache_path, "latents"+str(names[0])+'.pth'))
             del tmp
             self.global_step += 1
@@ -196,7 +193,8 @@ class Trainer:
         for idx, data in enumerate(data_list):
             image = data.pop('img').to(self.device, dtype=self.weight_dtype)
             latents = self.get_latents(image, self.train_loader_group.get_dataset(idx))
-        return latents.cpu(), data['img_name'].tolist()
+
+        return data['img_name'].tolist(), latents.cpu(), data['mask'].cpu(), data['crop_info'].cpu()
 
 
 

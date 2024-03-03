@@ -66,10 +66,10 @@ class TextImagePairDataset(Dataset):
             return
 
         import h5py
-        with h5py.File('/home/jwang/ybwork/data/dbv1_pg_cache.h5', 'r') as file:
+        with h5py.File('./data/dbv2_cache.h5', 'r') as file:
             already_cached = list(file.keys())
         already_cached = [str(name) for name in already_cached]
-
+        print(len(already_cached))
         self.latents = {}
         self.bucket.rest(0)
 
@@ -82,15 +82,13 @@ class TextImagePairDataset(Dataset):
                 image = data['img'].unsqueeze(0).to(device, dtype=weight_dtype)
                 latents = vae.encode(image).latent_dist.sample().squeeze(0)
                 data['img'] = (latents*vae.config.scaling_factor).cpu()
-                self.latents[img_name] = data
-                with h5py.File('/home/jwang/ybwork/data/dbv1_pg_cache.h5', 'a') as file:
+                # self.latents[img_name] = data
+                with h5py.File('./data/dbv2_cache.h5', 'a') as file:
                     file.create_dataset(str(img_name), data=data['img'].numpy())
                     print(f'cached {img_name}')
 
-        # import pdb;pdb.set_trace()
-
-        if self.cache_path:
-            torch.save(self.latents, self.cache_path)
+        # if self.cache_path:
+        #     torch.save(self.latents, self.cache_path)
 
     def __len__(self):
         return len(self.bucket)
@@ -114,7 +112,7 @@ class TextImagePairDataset(Dataset):
         # tokenize Sp or (Sn, Sp)
         tokens = self.tokenizer(prompt_ist, truncation=True, padding="max_length", return_tensors="pt",
                                     max_length=self.tokenizer.model_max_length*self.tokenizer_repeats)
-        # data['img_name'] = torch.tensor(int(img_name))
+        data['img_name'] = torch.tensor(int(img_name))
         data['prompt'] = tokens.input_ids.squeeze()
         if self.encoder_attention_mask and 'attention_mask' in tokens:
             data['attn_mask'] = tokens.attention_mask.squeeze()
